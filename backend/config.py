@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Meta App Config ────────────────────────────────
-META_APP_ID = os.getenv("META_APP_ID", "")
+META_APP_ID = os.getenv("META_APP_ID", "1663530681618204")
 META_APP_SECRET = os.getenv("META_APP_SECRET", "")
 META_REDIRECT_URI = os.getenv("META_REDIRECT_URI", "https://yourdomain.com/oauth/callback")
 META_API_VERSION = "v21.0"
