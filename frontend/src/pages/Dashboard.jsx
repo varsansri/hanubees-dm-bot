@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { logout } from '../auth'
 import api from '../api'
 
 export default function Dashboard() {
@@ -8,7 +7,6 @@ export default function Dashboard() {
   const [accounts, setAccounts] = useState([])
   const [rules, setRules] = useState([])
   const [logs, setLogs] = useState([])
-  const [user, setUser] = useState(null)
 
   const [kw, setKw] = useState('')
   const [msg, setMsg] = useState('')
@@ -19,20 +17,20 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     try {
-      const [u, s, a, r, l] = await Promise.all([
-        api.get('/api/me'),
+      const [s, a, r, l] = await Promise.all([
         api.get('/api/stats'),
         api.get('/api/ig-accounts'),
         api.get('/api/rules'),
         api.get('/api/dm-logs?limit=100'),
       ])
-      setUser(u.data)
       setStats(s.data)
       setAccounts(a.data)
       setRules(r.data)
       setLogs(l.data)
       if (a.data.length > 0 && !selectedAccount) setSelectedAccount(a.data[0].id)
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.error('Load error:', e)
+    }
   }, [selectedAccount])
 
   useEffect(() => { load() }, [load])
@@ -77,12 +75,10 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🐝</span>
-            <h1 className="text-xl font-bold text-purple-400">Hanubees</h1>
+            <h1 className="text-xl font-bold text-purple-400">Hanubees DM Bot</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm">{user?.email}</span>
-            <span className="bg-purple-900/50 text-purple-300 text-xs px-3 py-1 rounded-full uppercase">{user?.plan}</span>
-            <button onClick={logout} className="text-gray-500 hover:text-gray-300 text-sm">Logout</button>
+            <span className="bg-green-900/50 text-green-300 text-xs px-3 py-1 rounded-full">Live</span>
           </div>
         </div>
         <nav className="max-w-6xl mx-auto px-6 flex gap-1">
@@ -121,18 +117,19 @@ export default function Dashboard() {
 
             {/* Connect Instagram */}
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Instagram Accounts</h2>
+              <h2 className="text-lg font-semibold mb-4">Instagram Account</h2>
               {accounts.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 mb-4">No Instagram account connected yet</p>
+                  <p className="text-gray-400 mb-4">No Instagram account connected</p>
                   <a
-                    href="/oauth/connect"
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/oauth/connect`}
+                    target="_blank"
                     className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition"
                   >
                     Connect Instagram
                   </a>
                   <p className="text-gray-600 text-xs mt-3">
-                    You'll be redirected to Instagram to authorize. We never see your password.
+                    Log in via Instagram to authorize. We never see your password.
                   </p>
                 </div>
               ) : (
@@ -143,7 +140,7 @@ export default function Dashboard() {
                         <div className="w-8 h-8 bg-purple-700 rounded-full flex items-center justify-center text-sm font-bold">@</div>
                         <div>
                           <div className="font-medium">@{a.ig_username}</div>
-                          <div className="text-xs text-gray-500">Connected {new Date(a.connected_at).toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-500">Connected {a.connected_at ? new Date(a.connected_at).toLocaleDateString() : ''}</div>
                         </div>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded ${a.is_active ? 'bg-green-900 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
@@ -151,12 +148,6 @@ export default function Dashboard() {
                       </span>
                     </div>
                   ))}
-                  <a
-                    href="/oauth/connect"
-                    className="inline-block text-purple-400 text-sm hover:underline mt-2"
-                  >
-                    + Connect another account
-                  </a>
                 </div>
               )}
             </div>
@@ -186,7 +177,6 @@ export default function Dashboard() {
         {/* Rules Tab */}
         {tab === 'rules' && (
           <div className="space-y-6">
-            {/* Add rule form */}
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
               <h2 className="text-lg font-semibold mb-4">Create Automation Rule</h2>
               {error && <div className="bg-red-900/50 border border-red-700 text-red-200 rounded-lg p-3 text-sm mb-4">{error}</div>}
@@ -199,6 +189,7 @@ export default function Dashboard() {
                     onChange={(e) => setSelectedAccount(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
                   >
+                    <option value="">Select an account...</option>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>@{a.ig_username}</option>
                     ))}

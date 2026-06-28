@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from database import get_db
-from models import AutomationRule, IGAccount, User
-from auth import get_current_user
+from models import AutomationRule, IGAccount
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
 
@@ -24,11 +23,10 @@ class RuleUpdate(BaseModel):
 
 
 @router.post("")
-async def create_rule(data: RuleCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    # Verify the IG account belongs to this user
-    result = await db.execute(select(IGAccount).where(IGAccount.id == data.ig_account_id, IGAccount.user_id == user.id))
+async def create_rule(data: RuleCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(IGAccount).where(IGAccount.id == data.ig_account_id))
     if not result.scalar_one_or_none():
-        raise HTTPException(403, "Not your account")
+        raise HTTPException(404, "Instagram account not found")
 
     rule = AutomationRule(
         ig_account_id=data.ig_account_id,
@@ -43,12 +41,8 @@ async def create_rule(data: RuleCreate, user: User = Depends(get_current_user), 
 
 
 @router.get("")
-async def list_rules(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(AutomationRule)
-        .join(IGAccount)
-        .where(IGAccount.user_id == user.id)
-    )
+async def list_rules(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AutomationRule))
     rules = result.scalars().all()
     return [
         {
@@ -65,12 +59,8 @@ async def list_rules(user: User = Depends(get_current_user), db: AsyncSession = 
 
 
 @router.put("/{rule_id}")
-async def update_rule(rule_id: str, data: RuleUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(AutomationRule)
-        .join(IGAccount)
-        .where(AutomationRule.id == rule_id, IGAccount.user_id == user.id)
-    )
+async def update_rule(rule_id: str, data: RuleUpdate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AutomationRule).where(AutomationRule.id == rule_id))
     rule = result.scalar_one_or_none()
     if not rule:
         raise HTTPException(404, "Rule not found")
@@ -89,12 +79,8 @@ async def update_rule(rule_id: str, data: RuleUpdate, user: User = Depends(get_c
 
 
 @router.delete("/{rule_id}")
-async def delete_rule(rule_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(AutomationRule)
-        .join(IGAccount)
-        .where(AutomationRule.id == rule_id, IGAccount.user_id == user.id)
-    )
+async def delete_rule(rule_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AutomationRule).where(AutomationRule.id == rule_id))
     rule = result.scalar_one_or_none()
     if not rule:
         raise HTTPException(404, "Rule not found")
